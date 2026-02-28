@@ -57,7 +57,7 @@ func daemonRequest(socketPath, method, path string, reqBody, respBody interface{
 	if err != nil {
 		return fmt.Errorf("daemon request failed: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -116,14 +116,14 @@ func cmdAdd(args *skel.CmdArgs) error {
 	var confMap map[string]interface{}
 	netConfBytes, err := json.Marshal(conf.NetConf)
 	if err != nil {
-		daemonRequest(socketPath, http.MethodPost, "/del", api.DelRequest{
+		_ = daemonRequest(socketPath, http.MethodPost, "/del", api.DelRequest{
 			ContainerID: args.ContainerID,
 			NetworkID:   conf.NetworkID,
 		}, nil)
 		return fmt.Errorf("failed to marshal NetConf: %v", err)
 	}
 	if err := json.Unmarshal(netConfBytes, &confMap); err != nil {
-		daemonRequest(socketPath, http.MethodPost, "/del", api.DelRequest{
+		_ = daemonRequest(socketPath, http.MethodPost, "/del", api.DelRequest{
 			ContainerID: args.ContainerID,
 			NetworkID:   conf.NetworkID,
 		}, nil)
@@ -144,7 +144,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 	// Marshal final config for delegation
 	stdinData, err := json.Marshal(confMap)
 	if err != nil {
-		daemonRequest(socketPath, http.MethodPost, "/del", api.DelRequest{
+		_ = daemonRequest(socketPath, http.MethodPost, "/del", api.DelRequest{
 			ContainerID: args.ContainerID,
 			NetworkID:   conf.NetworkID,
 		}, nil)
@@ -155,7 +155,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 	result, err := invoke.DelegateAdd(context.TODO(), conf.DelegatePlugin, stdinData, nil)
 	if err != nil {
 		// Clean up the Neutron port on failure
-		daemonRequest(socketPath, http.MethodPost, "/del", api.DelRequest{
+		_ = daemonRequest(socketPath, http.MethodPost, "/del", api.DelRequest{
 			ContainerID: args.ContainerID,
 			NetworkID:   conf.NetworkID,
 		}, nil)
@@ -183,7 +183,7 @@ func cmdDel(args *skel.CmdArgs) error {
 	}
 
 	// Clean up the Neutron port via daemon
-	daemonRequest(socketPath, http.MethodPost, "/del", api.DelRequest{
+	_ = daemonRequest(socketPath, http.MethodPost, "/del", api.DelRequest{
 		ContainerID: args.ContainerID,
 		NetworkID:   conf.NetworkID,
 	}, nil)

@@ -44,7 +44,7 @@ func (l *peerCredListener) Accept() (net.Conn, error) {
 	}
 	raw, err := conn.SyscallConn()
 	if err != nil {
-		conn.Close()
+		_ = conn.Close()
 		return nil, fmt.Errorf("failed to get raw conn: %w", err)
 	}
 	var ucred *unix.Ucred
@@ -53,15 +53,15 @@ func (l *peerCredListener) Accept() (net.Conn, error) {
 		ucred, credErr = unix.GetsockoptUcred(int(fd), unix.SOL_SOCKET, unix.SO_PEERCRED)
 	})
 	if err != nil {
-		conn.Close()
+		_ = conn.Close()
 		return nil, fmt.Errorf("raw control: %w", err)
 	}
 	if credErr != nil {
-		conn.Close()
+		_ = conn.Close()
 		return nil, fmt.Errorf("getsockopt peercred: %w", credErr)
 	}
 	if ucred.Uid != 0 {
-		conn.Close()
+		_ = conn.Close()
 		return nil, fmt.Errorf("rejected non-root peer uid=%d", ucred.Uid)
 	}
 	return conn, nil
@@ -70,7 +70,7 @@ func (l *peerCredListener) Accept() (net.Conn, error) {
 func writeJSON(w http.ResponseWriter, status int, v interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(v)
+	_ = json.NewEncoder(w).Encode(v)
 }
 
 func writeError(w http.ResponseWriter, status int, msg string) {
@@ -294,7 +294,7 @@ func main() {
 	go func() {
 		sig := <-sigCh
 		log.Printf("received signal %v, shutting down", sig)
-		srv.Shutdown(context.Background())
+		_ = srv.Shutdown(context.Background())
 	}()
 
 	log.Println("daemon started, serving requests")
@@ -303,6 +303,6 @@ func main() {
 	}
 
 	// Clean up socket
-	os.Remove(api.SocketPath)
+	_ = os.Remove(api.SocketPath)
 	log.Println("daemon stopped")
 }
