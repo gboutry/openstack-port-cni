@@ -252,13 +252,25 @@ func newHandler(neutronClient *gophercloud.ServiceClient) http.Handler {
 	return mux
 }
 
+// buildAuthOpts reads OpenStack auth options from OS_* environment variables
+// and enables token re-authentication so that an expired Keystone token is
+// transparently renewed without restarting the daemon.
+func buildAuthOpts() (gophercloud.AuthOptions, error) {
+	opts, err := openstack.AuthOptionsFromEnv()
+	if err != nil {
+		return gophercloud.AuthOptions{}, err
+	}
+	opts.AllowReauth = true
+	return opts, nil
+}
+
 func main() {
 	log.SetPrefix("[openstack-port-daemon] ")
 	log.SetFlags(log.LstdFlags | log.Lmsgprefix)
 
 	// --- OpenStack authentication from environment ---
 	log.Println("authenticating with OpenStack from OS_* environment variables")
-	authOpts, err := openstack.AuthOptionsFromEnv()
+	authOpts, err := buildAuthOpts()
 	if err != nil {
 		log.Fatalf("failed to read OS_* env vars: %v", err)
 	}

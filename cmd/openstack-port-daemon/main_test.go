@@ -14,6 +14,47 @@ import (
 )
 
 // ---------------------------------------------------------------------------
+// TestBuildAuthOptsAllowReauth
+// ---------------------------------------------------------------------------
+
+// TestBuildAuthOptsAllowReauth verifies that buildAuthOpts always sets
+// AllowReauth=true so that gophercloud transparently re-authenticates when a
+// Keystone token expires (~1 h), avoiding "Authentication failed" errors in
+// long-running daemon instances.
+func TestBuildAuthOptsAllowReauth(t *testing.T) {
+	// Set the required auth variables to known values.
+	t.Setenv("OS_AUTH_URL", "http://keystone.example.com/v3")
+	t.Setenv("OS_USERNAME", "test-user")
+	t.Setenv("OS_PASSWORD", "test-pass")
+	t.Setenv("OS_PROJECT_NAME", "test-project")
+	t.Setenv("OS_DOMAIN_NAME", "Default")
+	t.Setenv("OS_IDENTITY_API_VERSION", "3")
+
+	// Clear other OS_* variables that could change AuthOptionsFromEnv() behavior.
+	t.Setenv("OS_TOKEN", "")
+	t.Setenv("OS_TENANT_ID", "")
+	t.Setenv("OS_TENANT_NAME", "")
+	t.Setenv("OS_PROJECT_ID", "")
+	t.Setenv("OS_DOMAIN_ID", "")
+	t.Setenv("OS_USER_DOMAIN_ID", "")
+	t.Setenv("OS_USER_DOMAIN_NAME", "")
+	t.Setenv("OS_PROJECT_DOMAIN_ID", "")
+	t.Setenv("OS_PROJECT_DOMAIN_NAME", "")
+	t.Setenv("OS_APPLICATION_CREDENTIAL_ID", "")
+	t.Setenv("OS_APPLICATION_CREDENTIAL_NAME", "")
+	t.Setenv("OS_APPLICATION_CREDENTIAL_SECRET", "")
+	t.Setenv("OS_AUTH_TYPE", "")
+
+	opts, err := buildAuthOpts()
+	if err != nil {
+		t.Fatalf("buildAuthOpts() error = %v", err)
+	}
+	if !opts.AllowReauth {
+		t.Error("AllowReauth = false; want true so expired tokens are renewed automatically")
+	}
+}
+
+// ---------------------------------------------------------------------------
 // TestPortName
 // ---------------------------------------------------------------------------
 
